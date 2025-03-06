@@ -34,13 +34,12 @@ graphs = [
 ]
 
 def VertexCover(G, E, k):
-
+    #
     for C in combinations( range(len(G)), k ):
         if isVC(E, C):
             return C
     #
 
-    # saveSolution(name, [])
     return []
 # end VertexCover() procedure 
 
