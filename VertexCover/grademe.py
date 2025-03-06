@@ -42,7 +42,11 @@ graphs = [
 
 from dimacs import *
 from sys    import *
+import os 
 
+def removeOldSolution(name):
+  if os.path.exists(name):
+      os.remove(name)
 
 def loadSolution( name ):
   f = open( name, "r" )
