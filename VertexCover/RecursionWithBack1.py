@@ -63,30 +63,42 @@ def VertexCover(G, E, k, C):
     return set()
 # end VertexCover() procedure 
 
-def main():
-    counter = 0 
+def main(name):
+    G = loadGraph( name )
+    E = edgeList(G)
 
-    for name in graphs:
-        counter += 1 
-        print(f"{counter}/{len(graphs)}: {name} ")
-
-        name = f"graph/{name}"
-        G = loadGraph( name )
-        E = edgeList(G)
-
-        for k in range(1, len(G) + 1):
-            C = VertexCover(G, E, k, set(range(0, len(G))), set())
-            if len(C) > 0: 
-                saveSolution(name + '.sol', C)
-                break
-        else:
-            saveSolution(name + '.sol', [])
+    for k in range(1, len(G) + 1):
+        C = VertexCover(G, E, k, set())
+        if len(C) > 0: 
+            saveSolution(name + '.sol', C)
+            break
     #
-
 # end main() procedure 
 
-main() 
+# 14/29 VertexCover
 
+from multiprocessing import Process
+from removeOld import removeOldSolutions
+
+if __name__ == '__main__':
+    removeOldSolutions()
+    counter = 0
+    n = len(graphs)
+
+    for nameGraph in graphs:
+        counter += 1
+        name = f"graph/{nameGraph}"
+        print(f"{counter}/{n} {name}")
+
+        p = Process(target=main, args=(name,))
+        p.start()
+        p.join(timeout=5)
+        if p.is_alive():
+            p.terminate()
+            p.join()
+            saveSolution(name + '.sol', [0])
+            print("\033[93mTime limit exceeded\033[0m")
+    #
 
 
 

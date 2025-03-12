@@ -36,5 +36,6 @@ def removeOldSolution(name):
   if os.path.exists(name):
       os.remove(name)
 
-for name in graphs:
-    removeOldSolution("graph/" + name + ".sol")
+def removeOldSolutions():
+  for name in graphs:
+      removeOldSolution("graph/" + name + ".sol")

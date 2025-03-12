@@ -63,7 +63,7 @@ def main():
                 break
 
         if not flag:
-            saveSolution(name + '.sol', [0])
+            saveSolution(name + '.sol', [])
     #
 
 # end main() procedure 
