@@ -5,7 +5,7 @@ from multiprocessing import Process
 
 path = "./graphs-colorings/"
 files = [entry.name for entry in os.scandir(path) if entry.is_file()]
-# files = files[:1]
+# files = files[:10]
 
 # kodowanie zmiennej do SAT:
 # x_ij = i * k + j, gdzie:
@@ -20,7 +20,7 @@ def ReductionColoringToSAT(G, E, k):
         formula.append(clause)
 
         for k1 in range(1, k + 1):
-            for k2 in range(k + 1, k + 1):
+            for k2 in range(k1 + 1, k + 1):
                 clause = [-(base + k1), -(base + k2)]
                 formula.append(clause)
         #
@@ -31,14 +31,14 @@ def ReductionColoringToSAT(G, E, k):
             clause = [-(u * k + k1), -(v * k + k1)]
             formula.append(clause)
     # end 'for' loops 
+
     return formula 
 # end procedure
-
-GOOD_SOLUTION_COUNTER = 0
 
 def RunParralel(G, E):
     #
     k = 2
+    coloring = []
     while True:
         formula = ReductionColoringToSAT(G, E, k)
         coloring = pycosat.solve(formula)
@@ -47,32 +47,35 @@ def RunParralel(G, E):
         else: break 
     # end 'while' loop  
 
-    print('Done calculating coloring. Checking correctness...')
     result = CheckColoring(G, k, coloring)
-    if result: GOOD_SOLUTION_COUNTER += 1   
+    if result: 
+        print("GOOD", flush=True)
+    else:
+        print("WRONG", flush=True)
 # end procedure 
 
 def main():
+    #
     counter, numberOfTests = 1, len(files)
 
     for name in files:
+        print(f"{counter}/{numberOfTests}: {name}")
+
         G = loadGraph(f'{path}{name}')
         E = edgeList(G)
 
         p = Process(target=RunParralel, args=(G, E))
         p.start()
-        p.join(timeout=5)
+        p.join(timeout=3)
         if p.is_alive():
             p.terminate()
             p.join()
             print("\033[93mTime limit exceeded\033[0m")
         #
         
-        print(f"{counter}/{numberOfTests}: {name}")
         counter += 1
     # end 'for' loop 
 
-    print(f'{GOOD_SOLUTION_COUNTER}/{numberOfTests}')
 # end procedure main()
 
 from collections import deque 
@@ -85,7 +88,8 @@ def BFS(G, C, V, vertex):
     while queue:
         vertex = queue.popleft()
         for neighbour in G[vertex]:
-            if C[neighbour] == C[vertex]: return False 
+            if C[neighbour] == C[vertex]: 
+                return False 
             if V[neighbour] == False:
                 V[neighbour] = True 
                 queue.appendleft(neighbour)
@@ -95,18 +99,22 @@ def BFS(G, C, V, vertex):
     return True 
 #
 
+def DecodeColoring(coloring, n, k):
+    decoder = []
+
+    for var in coloring:
+        if var > 0: 
+            i = (var - 1) // k  # Indeks wierzchołka
+            j = var - i * k  # Kolor (od 1 do k)
+            decoder.append(j)  # Przypisanie koloru wierzchołkowi
+    #
+    return decoder
+#
+
 def CheckColoring(G, k, coloring):
     n = len(G)
-    C = [None for _ in range(n)]
     V = [False for _ in range(n)]
-
-    for v in range(n):
-        base = v * k 
-        for k1 in range(1, k + 1):
-            if coloring[v] == base + k1:
-                C[v] = k1 
-                break 
-    # end 'for' loops 
+    C = DecodeColoring(coloring, n, k)
 
     flag = True 
 
@@ -115,7 +123,8 @@ def CheckColoring(G, k, coloring):
             flag = flag and BFS(G, C, V, v)
     #
 
-    return True 
+    return flag
 # end procedure CheckColoring()
 
-main()
+if __name__ == '__main__':
+    main()
