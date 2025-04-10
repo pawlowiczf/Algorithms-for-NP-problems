@@ -86,7 +86,10 @@ def checkGraph( name ):
       s += "OK  (VC = %d)" % len(C)
       return (s,len(C),True)
   else:
-    s += "FAIL! (99999)" 
+    if len(C) == 1 and 0 in C:
+      s += "Time exceeded"
+    else:
+      s += "FAIL! (99999)" 
     return (s,99999,False)
 
 

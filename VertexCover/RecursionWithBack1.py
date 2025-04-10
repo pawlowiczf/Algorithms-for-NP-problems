@@ -1,6 +1,8 @@
 from itertools import *
 from dimacs import *
 
+# 'Usuwamy' wierzchołki grafu - czyli wybieramy rekurencyjnie dany wierzchołek do pokrycia. 
+
 graphs = [
 ("e5"),
 ("e10"),
@@ -34,65 +36,69 @@ graphs = [
 ]
 
 def VertexCover(G, E, k, C):
-    u, v = -1, -1
-    for (x, y) in E:
-        if (x not in C) and (y not in C):
-            u, v = x, y
-            break 
     #
-
-
-    if u == -1 and v == -1: 
-        return C 
-    newE = E.copy()
-    newE.remove((u, v))
-    
     if k == 0: 
         return set() 
+    
+    for (u, v) in E:
+        if (u not in C) and (v not in C):
+            break 
+    else:
+        return C
+    
+    newE = [e for e in E if e != (u, v)]
 
-    newCU = C.copy()
-    newCV = C.copy()
-    newCU.add(u)
-    newCV.add(v)
-
-    S1 = VertexCover(G, newE, k - 1, newCU)
-    S2 = VertexCover(G, newE, k - 1, newCV)
-
+    C.add(u)
+    S1 = VertexCover(G, newE, k - 1, C)
     if S1:
         return S1 
+    C.remove(u)
+
+    C.add(v)   
+    S2 = VertexCover(G, newE, k - 1, C)
     if S2:
         return S2 
-    
+    C.remove(v)    
+
     return set()
 # end VertexCover() procedure 
 
-def main():
-    counter = 0 
+def main(name):
+    G = loadGraph( name )
+    E = edgeList(G)
 
-    for name in graphs:
-        flag = False 
-        counter += 1 
-        print(f"{counter}/{len(graphs)}: {name} ")
-
-        name = f"graph/{name}"
-        G = loadGraph( name )
-        E = edgeList(G)
-
-        for k in range(1, len(G) + 1):
-            C = VertexCover(G, E, k, set())
-            if len(C) > 0: 
-                saveSolution(name + '.sol', C)
-                flag = True 
-                break
-
-        if not flag:
-            saveSolution(name + '.sol', [0])
+    for k in range(1, len(G) + 1):
+        C = VertexCover(G, E, k, set())
+        if len(C) > 0: 
+            saveSolution(name + '.sol', C)
+            break
     #
-
 # end main() procedure 
 
-main() 
+# 14/29 VertexCover
 
+from multiprocessing import Process
+from removeOld import removeOldSolutions
+
+if __name__ == '__main__':
+    removeOldSolutions()
+    counter = 0
+    n = len(graphs)
+
+    for nameGraph in graphs:
+        counter += 1
+        name = f"graph/{nameGraph}"
+        print(f"{counter}/{n} {name}")
+
+        p = Process(target=main, args=(name,))
+        p.start()
+        p.join(timeout=5)
+        if p.is_alive():
+            p.terminate()
+            p.join()
+            saveSolution(name + '.sol', [0])
+            print("\033[93mTime limit exceeded\033[0m")
+    #
 
 
 

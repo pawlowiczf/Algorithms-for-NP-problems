@@ -1,5 +1,6 @@
 from itertools import *
 from dimacs import *
+from copy import deepcopy
 
 graphs = [
 ("e5"),
@@ -33,71 +34,125 @@ graphs = [
 ("r100_005"),
 ]
 
-def remove_edges(E, vertices):
-    return [(x, y) for (x, y) in E if x not in vertices and y not in vertices]
+# def removeEdges(E, vertices):
+#     return [(x, y) for (x, y) in E if x not in vertices and y not in vertices]
+# #
 
-def VertexCover(G, E, k, C):
+# def VertexCover(G, E, k, C):
+#     #
+#     if k < 0: return set() 
+#     if len(E) == 0: return C 
+#     if k == 0: return set() 
+
+#     # Find a vertex 'u' with degree > 0.
+#     u, _ = E[0]
+
+#     newG = G.copy()
+#     newE = removeEdges(E, {u})
+#     newC = C.copy()
+#     newG[u] = set()
+#     newC.add(u)
+#     S1 = VertexCover(newG, newE, k - 1, newC)
+#     if S1: return S1 
+
+#     newG = G.copy() 
+#     newC = C.copy()
+#     vertices = set()
+#     for neighbour in G[u]:
+#         vertices.add(neighbour)
+#         newG[neighbour] = set()
+#     newE = removeEdges(E, vertices)
+#     S2 = VertexCover(newG, newE, k - len(vertices), newC.union(vertices))
+#     if S2: return S2 
+
+#     return set()
+# #
+
+def hasNoEdges(G):
+    return not any(G)
+#
+
+def without(G, vertices):
+    G = deepcopy(G)
+    for vertex in vertices:
+        for neighbour in G[vertex]:
+            G[neighbour].remove(vertex)
+        #
+        G[vertex].clear()
     #
+
+    return G
+#
+
+def VertexCover2(G, k, C):
     if k < 0: return set() 
+    if hasNoEdges(G): return C
+    if k == 0: return set()
 
-    if len(E) == 0: return C 
-    if k == 0: return set() 
-    
-    u = -1
-    for vertex in range(len(G)):
-        if vertex not in C and len(G[vertex]) > 0:
-            u = vertex 
-            break 
-    
-    if u == -1: return set()
-
-    newCU = C.copy()
-    newC = C.copy()
-    newCU.add(u)
-
-    for vertex in G[u]:
-        newC.add(vertex)
-
-    E1 = remove_edges(E, {u})
-    S1 = VertexCover(G, E1, k - 1, newCU)
-
-    E2 = remove_edges(E, G[u])
-    S2 = VertexCover(G, E2, k - len(G[u]), newC)
-
-    if S1:
-        return S1 
-    if S2:
-        return S2 
-    
-    return set()
-# end VertexCover() procedure 
-
-def main():
-    counter = 0 
-
-    for name in graphs:
-        flag = False 
-        counter += 1 
-        print(f"{counter}/{len(graphs)}: {name} ")
-
-        name = f"graph/{name}"
-        G = loadGraph( name )
-        E = edgeList(G)
-
-        for k in range(1, len(G) + 1):
-            C = VertexCover(G, E, k, set())
-            if len(C) > 0: 
-                saveSolution(name + '.sol', C)
-                flag = True 
-                break
-
-        if not flag:
-            saveSolution(name + '.sol', [0])
+    for u, N_u in enumerate(G):
+        if N_u: break 
     #
 
+    S1 = VertexCover2(without(G, {u}), k - 1, C | {u})
+    if S1: return S1 
+
+    S2 = VertexCover2(without(G, N_u), k - len(N_u), C | N_u)
+    if S2: return S2 
+
+    return set()
+#
+
+# def main(name):
+#     G = loadGraph( name )
+#     E = edgeList(G)
+
+#     for k in range(1, len(G) + 1):
+#         C = VertexCover(G, E, k, set())
+#         if len(C) > 0: 
+#             saveSolution(name + '.sol', C)
+#             return
+        
+#     saveSolution(name + '.sol', [-1])
 # end main() procedure 
 
-main() 
+def main2(name):
+    G = loadGraph( name )
+    E = edgeList(G)
+
+    for k in range(1, len(G) + 1):
+        C = VertexCover2(G, k, set())
+        if len(C) > 0: 
+            saveSolution(name + '.sol', C)
+            return
+        
+    saveSolution(name + '.sol', [-1])
+# end main2() procedure 
+
+from multiprocessing import Process
+from removeOld import removeOldSolutions
+
+# 15/29 VertexCover
+
+if __name__ == '__main__':
+    removeOldSolutions()
+    counter = 0
+    n = len(graphs)
+
+    for nameGraph in graphs:
+        counter += 1
+        name = f"graph/{nameGraph}"
+        print(f"{counter}/{n} {name}")
+        
+        p = Process(target=main2, args=(name,))
+        p.start()
+        p.join(timeout=5)
+        if p.is_alive():
+            p.terminate()
+            p.join()
+            saveSolution(name + '.sol', [0])
+            print("\033[93mTime limit exceeded\033[0m")
+    #
+#
 
 
 
