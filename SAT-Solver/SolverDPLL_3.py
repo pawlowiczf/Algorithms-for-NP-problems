@@ -38,6 +38,39 @@ def simplifyCNF( CNF, V ):
 
 path = './sats/'
 
+def singleVariableClause(CNF):
+    for clause in CNF:
+        if len(clause) == 1: return clause 
+    return None 
+#
+
+from copy import deepcopy
+
+def unitPropagate( CNF, V ):
+    #
+    newCNF = deepcopy(CNF)
+
+    while (clause := singleVariableClause(newCNF)) != None:
+        variable = clause[0]
+        v = abs(variable)
+
+        
+        if variable < 0: V[v] = -1 
+        else: V[v] = 1 
+
+        newCNF = simplifyCNF(newCNF, V)
+    #
+    return newCNF
+#
+    # while CNF zawiera klauzulę postaci C = [L]:
+    #     if L ustawione w V na 0:
+    #     formuła niespełnialna
+    #     ustaw L na 1 w V
+    #     uprość formułę CNF
+
+    # return CNF
+#
+
 def SolverSAT( CNF, V ):
     # CNF to rozważana formuła
     # V to wartościowanie zmiennych
@@ -46,18 +79,26 @@ def SolverSAT( CNF, V ):
     if simplifiedCNF is None: return "UNSAT"
     if len(simplifiedCNF) == 0: return V # formula is satisfied, no clauses left 
 
-    v = abs(simplifiedCNF[0][0])
+    clause = simplifiedCNF[0]
 
-    V1 = V.copy()
-    V1[v] = 1 
-    result = SolverSAT( simplifiedCNF, V1 )
-    if result != "UNSAT": return result 
+    for variable in clause:
+        v = abs(variable) 
+        if v in V: continue
 
-    V2 = V.copy()
-    V2[v] = -1
-    result = SolverSAT( simplifiedCNF, V2 )
-    if result != "UNSAT": return result 
+        if variable < 0: V[v] = -1 
+        else: V[v] = 1 
 
+        result = SolverSAT( CNF, V )
+        if result != "UNSAT": return result    
+
+        if variable < 0: V[v] = 1 
+        else: V[v] = -1
+    #
+    for variable in clause:
+        v = abs(variable)
+        if v in V:
+            del V[v]
+        
     return "UNSAT"
 # end procedure 
 
