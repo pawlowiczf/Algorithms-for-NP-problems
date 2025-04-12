@@ -39,6 +39,8 @@ def simplifyCNF( CNF, V ):
 path = './sats/'
 
 def singleVariableClause(CNF):
+    if CNF is None: return None 
+
     for clause in CNF:
         if len(clause) == 1: return clause 
     return None 
@@ -48,36 +50,99 @@ from copy import deepcopy
 
 def unitPropagate( CNF, V ):
     #
-    newCNF = deepcopy(CNF)
+    newCNF = simplifyCNF(CNF, V)
+    if newCNF is None: return None 
 
     while (clause := singleVariableClause(newCNF)) != None:
         variable = clause[0]
         v = abs(variable)
+        requiredValue = 1 if variable > 0 else -1 
 
-        
+        if v in V:
+            if V[v] != requiredValue: return None 
+            else:
+                newCNF = simplifyCNF(CNF, V)
+                if newCNF is None: return None 
+                continue 
+        #
+        #  
         if variable < 0: V[v] = -1 
         else: V[v] = 1 
 
         newCNF = simplifyCNF(newCNF, V)
+        if newCNF is None: return None
     #
+
     return newCNF
-#
-    # while CNF zawiera klauzulę postaci C = [L]:
-    #     if L ustawione w V na 0:
-    #     formuła niespełnialna
-    #     ustaw L na 1 w V
-    #     uprość formułę CNF
+# end procedure
 
-    # return CNF
-#
+def findPureVariables(CNF):
+    pure = {} 
+    for clause in CNF:
+        for variable in clause:
+            v = abs(variable)
+            sign = 1 if variable > 0 else -1 
 
-def SolverSAT( CNF, V ):
+            if v not in pure:
+                pure[v] = sign 
+            elif pure[v] != sign:
+                pure[v] = 0 
+    #
+
+    pure = [(v, sign) for v, sign in pure.items() if sign != 0]
+    return pure if len(pure) > 0 else None 
+# end procedure 
+
+def removePureVariables(CNF, V):
+    newCNF = deepcopy(CNF)
+
+    while (pures := findPureVariables(newCNF)) is not None: 
+        for v, sign in pures: 
+            if v in V:
+                if V[v] != sign: return None 
+            else:
+                V[v] = sign 
+        #
+        newCNF = simplifyCNF(newCNF, V)
+        if newCNF is None: return None 
+    #
+
+    return newCNF
+# end procedure 
+
+def simplifyFormula(CNF, V):
+    while True:
+        cnf_after_unit = unitPropagate(CNF, V)
+        if cnf_after_unit is None:
+            return None
+        
+        cnf_after_pure = removePureVariables(cnf_after_unit, V)
+        if cnf_after_pure is None:
+            return None
+        
+        if cnf_after_pure == CNF:
+            break
+        CNF = cnf_after_pure
+    
+    return CNF
+# end procedure 
+
+def SolverSAT( CNF, oldV ):
     # CNF to rozważana formuła
     # V to wartościowanie zmiennych
+    V = oldV.copy()
 
-    simplifiedCNF = simplifyCNF(CNF, V)
+    simplifiedCNF = simplifyFormula(CNF, V)
     if simplifiedCNF is None: return "UNSAT"
     if len(simplifiedCNF) == 0: return V # formula is satisfied, no clauses left 
+
+    # simplifiedCNF = unitPropagate(CNF, V)
+    # if simplifiedCNF is None: return "UNSAT"
+    # if len(simplifiedCNF) == 0: return V # formula is satisfied, no clauses left 
+
+    # simplifiedCNF = removePureVariables(simplifiedCNF, V)
+    # if simplifiedCNF is None: return "UNSAT"
+    # if len(simplifiedCNF) == 0: return V # formula is satisfied, no clauses left 
 
     clause = simplifiedCNF[0]
 
@@ -123,4 +188,4 @@ def main(files):
     print(f'{goodSolutionCounter}/{numberOfTests}')
 # end procedure main()
 
-main(smallSATs)
+main(bigSATs)
