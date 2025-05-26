@@ -1,4 +1,5 @@
 import sys 
+from collections import deque
 
 def canMoveTo(B, W, H, y, x):
     return B[y][x] != '#' and B[y][x] != 'O'
@@ -10,6 +11,48 @@ moves = {
     "P": (0, 1),
     "L": (0, -1)
 }
+
+def getValidNeighbours(B, W, H, y, x):
+    neighbours = [] 
+    for move, (dfY, dfX) in moves.items():
+        nY, nX = y + dfY, x + dfX 
+        if canMoveTo(B, W, H, nY, nX):
+            neighbours.append((nY, nX))
+    #
+    return neighbours
+#
+
+# startY, startX - last valid position 
+def canContinueSearch(B, W, H):
+
+    visited = [ [False for _ in range(W)] for _ in range(H) ]
+
+    def BFS(y, x):
+        queue = deque()
+        queue.append((y, x))
+        visited[y][x] = True 
+
+        while queue:
+            sY, sX = queue.popleft()
+            for (nY, nX) in getValidNeighbours(B, W, H, sY, sX):
+                if not visited[nY][nX]:
+                    visited[nY][nX] = True 
+                    queue.append((nY, nX))
+            #
+        #
+    # end procedure BFS()
+
+    lakesFound = 0 
+    for y in range(H):
+        for x in range(W):
+            if visited[y][x] == False and B[y][x] == '*':
+                BFS(y, x)
+                lakesFound += 1
+                if lakesFound >= 2: return False 
+    #
+
+    return True 
+#
 
 # B - board, W - width, H - height, S - number of snacks
 def BruteForce(B, W, H, S, y, x, alreadyEaten, path):
@@ -31,6 +74,13 @@ def BruteForce(B, W, H, S, y, x, alreadyEaten, path):
 
             newY, newX = newY + dfY, newX + dfX 
         # end 'while' loop
+        
+        if y % 2 == 0 and x % 2 == 0:
+            if not canContinueSearch(B, W, H):
+                for (oldY, oldX, oldValue) in restorer:
+                    B[oldY][oldX] = oldValue
+                alreadyEaten = alreadyEatenCopy
+                continue 
         
         # dodaj ruch do wyniku, przesuń się na odpowiednie pole i sprawdź rekurencyjnie, czy 
         # taki ruch zapewnia wygraną. Jeśli nie, to usuń ten ruch z wyniku oraz usuń całą trasę (restorer). 
