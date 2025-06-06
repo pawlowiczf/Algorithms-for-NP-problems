@@ -1,70 +1,62 @@
 from dimacs import *
-import os 
-import pycosat 
 from multiprocessing import Process
+from pulp import *
+import os 
 
-def index( i, j ):
-  return int( (i + j) * ( i + j + 1 ) / 2 + i + 1)
+
+def VertexCoverILP2(G, E):
+    n = len(G)
+
+    variablesMap = {} 
+    objectiveFunc = 0 
+
+    model = LpProblem("VertexCover", LpMinimize)
+
+    for a in range(n):
+        label = f'x_{a}'
+
+        v = LpVariable(name=label, lowBound=0, upBound=1, cat=LpBinary)
+        variablesMap[label] = v 
+        
+        objectiveFunc += v 
+    #
+    
+    for (a, b) in E:
+        labelA, labelB = f'x_{a}', f'x_{b}' 
+        vA, vB = variablesMap[labelA], variablesMap[labelB] 
+        model += vA + vB >= 1 
+    #
+
+    model += objectiveFunc
+    return model 
 #
 
-def ThresholdFunctionFormula(G, E):
-    n = len(G) 
-    formula = []
+def VertexCoverILP(G, E):
+    n = len(G)
+    model = LpProblem("VertexCover", LpMinimize)
 
-    for i in range(1, n + 1):
-        formula.append( [index(i, 0)] )
-    #
-    for j in range(1, n + 1):
-        formula.append( [-index(0, j)] )
-    #
+    variables = [LpVariable(f"x_{i}", cat="Binary") for i in range(n)]
 
-    for i in range(1, n + 1):
-        for j in range(1, n + 1):
-            formula.append( [-index(i - 1, j), index(i, j)] )
-            formula.append( [-index(i - 1, j - 1 ), -i, index(i, j)] )
-    #
+    model += lpSum(variables)
 
-    return formula 
+    for a, b in E:
+        model += variables[a] + variables[b] >= 1
+
+    return model
 #
 
-def VertexCoverToSAT(G, E):
-    formula = [] 
-
-    for (a, b) in E: 
-        formula.append( [a + 1, b + 1] )
-    #
-
-    return formula 
-#
-
-def RunPycoSATParralel(G, E):
+def RunILPParralel(G, E):
     #
     n = len(G)
 
-    formulaB = ThresholdFunctionFormula(G, E) 
+    model = VertexCoverILP(G, E) 
+    model.solve(PULP_CBC_CMD(msg=False))
 
-    k = 2
-    while k <= n:
-        formulaA = VertexCoverToSAT(G, E)
-        formulaB.append( [-index(n, k + 1)] )
+    if model.status == 1:
+        print(f'Success. {value(model.objective)} - {n}')
+    else:
+        print('Failure. Not found. Error')
 
-        formulaResults = pycosat.solve(formulaA + formulaB)
-
-        if formulaResults == 'UNSAT': k += 1
-        else: 
-            print(f'Success: {k} - {n}')
-            return 
-
-        formulaB.pop()
-    # end 'while' loop  
-
-    print('Failure. Not found.')
-
-    # result = CheckColoring(G, k, coloring)
-    # if result: 
-    #     print("GOOD", flush=True)
-    # else:
-    #     print("WRONG", flush=True)
 # end procedure 
 
 path = "./graph/"
@@ -79,7 +71,7 @@ def main():
         G = loadGraph(f'{path}{name}')
         E = edgeList(G)
 
-        p = Process(target=RunPycoSATParralel, args=(G, E))
+        p = Process(target=RunILPParralel, args=(G, E))
         p.start()
         p.join(timeout=3)
         if p.is_alive():
